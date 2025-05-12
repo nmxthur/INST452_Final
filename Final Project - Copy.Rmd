@@ -161,6 +161,46 @@ head(results_data)
 # Fairness and Bias Evaluation
 
 ```{r}
+ # function to evaluate metrics by subgroup
+  eval_by_group <- function(model, test_data, group_var) {
+    group_levels <- unique(test_data[[group_var]])
+    
+    # for each level in the group (e.g., Male/Female), compute metrics
+    results <- lapply(group_levels, function(level) {
+      subset <- test_data[test_data[[group_var]] == level, ]
+      
+      # predicted probabilities
+      probs <- predict(model, newdata = subset, type = "prob")
+      preds <- predict(model, newdata = subset)
+      
+      auc_val <- as.numeric(roc(response = subset$Diabetes_012, predictor = probs$Diabetic)$auc)
+      cm <- confusionMatrix(preds, subset$Diabetes_012, positive = "Diabetic")
+      
+      tibble(
+        Group = level,
+        AUC = auc_val,
+        Accuracy = cm$overall["Accuracy"],
+        Sensitivity = cm$byClass["Sensitivity"],
+        Specificity = cm$byClass["Specificity"]
+      )
+    })
+    
+    bind_rows(results)
+  }
+
+  # apply the function to each model
+  bias_tree <- eval_by_group(model_tree, test, "Sex") %>% mutate(Model = "Decision Tree")
+  bias_svm  <- eval_by_group(model_svm, test, "Sex") %>% mutate(Model = "SVM")
+  bias_knn  <- eval_by_group(model_knn, test, "Sex") %>% mutate(Model = "kNN")
+
+  # combine results
+  bias_results <- bind_rows(bias_tree, bias_svm, bias_knn)
+  
+  print(bias_results)
+  
+} else {
+  cat("Sex variable not found in the dataset.")
+}
 
 ```
 
