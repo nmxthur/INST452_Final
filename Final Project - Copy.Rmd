@@ -161,6 +161,7 @@ head(results_data)
 # Fairness and Bias Evaluation
 
 ```{r}
+names(df)
 
 ```
 
